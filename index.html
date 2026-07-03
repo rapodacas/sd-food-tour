@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>North Park Food Tour</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --card: #1a1a1a;
+      --card-hover: #222;
+      --accent1: #f97316;
+      --accent2: #ef4444;
+      --accent3: #8b5cf6;
+      --text: #f5f5f5;
+      --text-muted: #a3a3a3;
+      --border: #2a2a2a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 2.5rem 1rem 1.5rem;
+      background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.2rem;
+      letter-spacing: -0.5px;
+      margin-bottom: 0.3rem;
+    }
+
+    header .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 400;
+    }
+
+    header .date {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.3rem 1rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      color: var(--accent1);
+      font-weight: 600;
+    }
+
+    header .stats {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    header .stats span { display: flex; align-items: center; gap: 0.3rem; }
+
+    #map {
+      width: 100%;
+      height: 350px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .stops-container {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    .walk-connector {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 0 0.75rem 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .walk-connector .line {
+      width: 2px;
+      height: 24px;
+      background: var(--border);
+      margin-right: 0.5rem;
+    }
+
+    .walk-connector svg { flex-shrink: 0; }
+
+    .stop-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .stop-card:hover {
+      background: var(--card-hover);
+      border-color: #333;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+
+    .stop-card.active { border-color: var(--accent1); }
+    .stop-card[data-stop="2"].active { border-color: var(--accent2); }
+    .stop-card[data-stop="3"].active { border-color: var(--accent3); }
+
+    .stop-header {
+      padding: 1.25rem 1.25rem 1rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .stop-number {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .stop-card[data-stop="1"] .stop-number { background: var(--accent1); color: #fff; }
+    .stop-card[data-stop="2"] .stop-number { background: var(--accent2); color: #fff; }
+    .stop-card[data-stop="3"] .stop-number { background: var(--accent3); color: #fff; }
+
+    .stop-info { flex: 1; }
+
+    .stop-info .category {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .stop-card[data-stop="1"] .category { color: var(--accent1); }
+    .stop-card[data-stop="2"] .category { color: var(--accent2); }
+    .stop-card[data-stop="3"] .category { color: var(--accent3); }
+
+    .stop-info h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.35rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .stop-info .address {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .stop-info .hours {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .expand-icon {
+      color: var(--text-muted);
+      transition: transform 0.3s;
+      flex-shrink: 0;
+      margin-top: 0.5rem;
+    }
+
+    .stop-card.active .expand-icon { transform: rotate(180deg); }
+
+    .stop-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+    }
+
+    .stop-card.active .stop-details { max-height: 1200px; }
+
+    .stop-details-inner {
+      padding: 0 1.25rem 1.25rem;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin-bottom: 1rem;
+    }
+
+    .menu-section h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      font-weight: 600;
+    }
+
+    .menu-section { margin-bottom: 1rem; }
+
+    .menu-items { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+    .menu-item {
+      padding: 0.35rem 0.75rem;
+      background: #252525;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+    }
+
+    .menu-item.pick {
+      border-color: var(--accent1);
+      color: var(--text);
+      background: rgba(249, 115, 22, 0.1);
+    }
+
+    .stop-card[data-stop="2"] .menu-item.pick {
+      border-color: var(--accent2);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .stop-card[data-stop="3"] .menu-item.pick {
+      border-color: var(--accent3);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .pick-badge {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+      margin-left: 0.3rem;
+    }
+
+    .stop-card[data-stop="1"] .pick-badge { color: var(--accent1); }
+    .stop-card[data-stop="2"] .pick-badge { color: var(--accent2); }
+    .stop-card[data-stop="3"] .pick-badge { color: var(--accent3); }
+
+    .rec-box {
+      padding: 1rem;
+      border-radius: 12px;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      line-height: 1.5;
+    }
+
+    .stop-card[data-stop="1"] .rec-box {
+      background: rgba(249, 115, 22, 0.08);
+      border: 1px solid rgba(249, 115, 22, 0.2);
+    }
+
+    .stop-card[data-stop="2"] .rec-box {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .stop-card[data-stop="3"] .rec-box {
+      background: rgba(139, 92, 246, 0.08);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+    }
+
+    .rec-box .rec-title {
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .rec-box .rec-text { color: var(--text-muted); font-size: 0.8rem; }
+
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.75rem;
+      padding: 0.5rem 1rem;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: none;
+      color: #fff;
+      transition: opacity 0.2s;
+    }
+
+    .nav-btn:hover { opacity: 0.85; }
+    .stop-card[data-stop="1"] .nav-btn { background: var(--accent1); }
+    .stop-card[data-stop="2"] .nav-btn { background: var(--accent2); }
+    .stop-card[data-stop="3"] .nav-btn { background: var(--accent3); }
+
+    .flavor-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+
+    .flavor-card {
+      padding: 0.6rem 0.75rem;
+      background: #252525;
+      border-radius: 10px;
+      border: 1px solid transparent;
+    }
+
+    .flavor-card.pick {
+      border-color: var(--accent3);
+      background: rgba(139, 92, 246, 0.1);
+    }
+
+    .flavor-card .flavor-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.15rem;
+    }
+
+    .flavor-card .flavor-desc {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .phone-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.75rem;
+    }
+
+    .phone-link:hover { color: var(--text); }
+
+    @media (max-width: 480px) {
+      header h1 { font-size: 1.7rem; }
+      #map { height: 280px; }
+      .flavor-grid { grid-template-columns: 1fr; }
+      .stop-info h2 { font-size: 1.15rem; }
+    }
+
+    /* Leaflet popup overrides */
+    .leaflet-popup-content-wrapper {
+      background: var(--card) !important;
+      color: var(--text) !important;
+      border-radius: 12px !important;
+      border: 1px solid var(--border) !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important;
+    }
+
+    .leaflet-popup-tip { background: var(--card) !important; }
+
+    .leaflet-popup-content {
+      margin: 0.75rem 1rem !important;
+      font-family: 'Inter', sans-serif !important;
+      font-size: 0.85rem !important;
+    }
+
+    .popup-name {
+      font-family: 'Playfair Display', serif;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .popup-cat { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>North Park Food Tour</h1>
+  <p class="subtitle">Best Taco &bull; Best Burger &bull; Best Dessert</p>
+  <div class="date">Friday, July 3, 2026</div>
+  <div class="stats">
+    <span>
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="M7 4v3l2 1"/></svg>
+      ~2.5 hours
+    </span>
+    <span>
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12 L7 2 L12 12" /><line x1="4.5" y1="8" x2="9.5" y2="8"/></svg>
+      3 stops
+    </span>
+    <span>
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h8M7 3v8"/></svg>
+      ~1 mile walk
+    </span>
+  </div>
+</header>
+
+<div id="map"></div>
+
+<div class="stops-container">
+
+  <!-- STOP 1 -->
+  <div class="stop-card" data-stop="1" onclick="toggleCard(this)">
+    <div class="stop-header">
+      <div class="stop-number">1</div>
+      <div class="stop-info">
+        <div class="category">Best Taco</div>
+        <h2>The Taco Stand</h2>
+        <div class="address">3000 Upas St, North Park</div>
+        <div class="hours">Open today 10am – 11pm &bull; <a href="tel:6197958797" class="phone-link">(619) 795-8797</a></div>
+      </div>
+      <svg class="expand-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 8 10 12 14 8"/></svg>
+    </div>
+    <div class="stop-details">
+      <div class="stop-details-inner">
+        <div class="divider"></div>
+
+        <div class="menu-section">
+          <h3>Tacos</h3>
+          <div class="menu-items">
+            <span class="menu-item pick">Al Pastor <span class="pick-badge">pick</span></span>
+            <span class="menu-item pick">Baja Fish <span class="pick-badge">pick</span></span>
+            <span class="menu-item">Carne Asada</span>
+            <span class="menu-item">Pollo Asado</span>
+            <span class="menu-item">Camaron</span>
+            <span class="menu-item">Grilled Pescado</span>
+            <span class="menu-item">Nopal</span>
+            <span class="menu-item">Mushroom</span>
+            <span class="menu-item">Sonora</span>
+            <span class="menu-item">California</span>
+          </div>
+        </div>
+
+        <div class="menu-section">
+          <h3>Burritos</h3>
+          <div class="menu-items">
+            <span class="menu-item">Carne Asada</span>
+            <span class="menu-item">Al Pastor</span>
+            <span class="menu-item">Pollo Asado</span>
+            <span class="menu-item">Camaron</span>
+            <span class="menu-item">Pescado</span>
+            <span class="menu-item">Mar y Tierra</span>
+            <span class="menu-item">Mushroom</span>
+            <span class="menu-item">Bean & Cheese</span>
+          </div>
+        </div>
+
+        <div class="menu-section">
+          <h3>Quesadillas</h3>
+          <div class="menu-items">
+            <span class="menu-item">Carne Asada</span>
+            <span class="menu-item">Al Pastor</span>
+            <span class="menu-item">Pollo Asado</span>
+            <span class="menu-item">Camaron</span>
+            <span class="menu-item">Mushroom</span>
+            <span class="menu-item">Cheese</span>
+          </div>
+        </div>
+
+        <div class="menu-section">
+          <h3>Extras</h3>
+          <div class="menu-items">
+            <span class="menu-item">Carne Asada Fries</span>
+            <span class="menu-item">Mar y Tierra Fries</span>
+            <span class="menu-item">Chips & Guac</span>
+            <span class="menu-item">Elote</span>
+            <span class="menu-item">Churros</span>
+          </div>
+        </div>
+
+        <div class="rec-box">
+          <div class="rec-title">Claude's Pick: Split 2 tacos</div>
+          <div class="rec-text"><strong>Al Pastor</strong> — perfectly seasoned pork on a handmade tortilla, the star of the menu. <strong>Baja Fish</strong> — crispy battered, classic San Diego. Don't skip the salsa bar.</div>
+        </div>
+
+        <a class="nav-btn" href="https://maps.google.com/?daddr=3000+Upas+St,+San+Diego,+CA+92104" target="_blank" rel="noopener">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11L11 3M11 3H5M11 3v6"/></svg>
+          Navigate
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- WALK 1→2 -->
+  <div class="walk-connector">
+    <div class="line"></div>
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M10 22V14L8 11l2-3h4l2 3-2 3v8"/></svg>
+    10 min walk south via 30th St → El Cajon Blvd
+  </div>
+
+  <!-- STOP 2 -->
+  <div class="stop-card" data-stop="2" onclick="toggleCard(this)">
+    <div class="stop-header">
+      <div class="stop-number">2</div>
+      <div class="stop-info">
+        <div class="category">Best Burger</div>
+        <h2>The Wise Ox</h2>
+        <div class="address">2855 El Cajon Blvd, North Park</div>
+        <div class="hours">Open today 10am – 7pm &bull; <a href="tel:6195648976" class="phone-link">(619) 564-8976</a></div>
+      </div>
+      <svg class="expand-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 8 10 12 14 8"/></svg>
+    </div>
+    <div class="stop-details">
+      <div class="stop-details-inner">
+        <div class="divider"></div>
+
+        <div class="menu-section">
+          <h3>Sandwiches & Burgers</h3>
+          <div class="menu-items" style="flex-direction: column;">
+            <span class="menu-item" style="width:100%"><strong>#1 Breakfast Sandwich</strong> — american cheese, sausage, fried egg, hot honey, iceberg, duke's mayo</span>
+            <span class="menu-item" style="width:100%"><strong>#2 Peppered Turkey</strong> — swiss, lettuce, tomato, avocado, chipotle aioli, toasted sourdough</span>
+            <span class="menu-item" style="width:100%"><strong>#3 Smoked Bologna</strong> — american cheese, mayo & mustard, TRG bun</span>
+            <span class="menu-item" style="width:100%"><strong>#4 Cheesesteak</strong> — shaved NY strip, american cheese, sweet pickled peppers, onions, duke's mayo, amoroso roll</span>
+            <span class="menu-item pick" style="width:100%"><strong>#5 Double Cheeseburger</strong> — two house-ground chuck patties, american cheese, lettuce, tomato, pickles, Thousand Island, house-made bun <span class="pick-badge">pick</span></span>
+            <span class="menu-item" style="width:100%"><strong>#6 Dry-Aged Burger</strong> — house-cured bacon, melted havarti, mayo, mustard, pickles</span>
+            <span class="menu-item" style="width:100%"><strong>#7 Rotating Special</strong> — ask at counter</span>
+          </div>
+        </div>
+
+        <div class="rec-box">
+          <div class="rec-title">Claude's Pick: Double Cheeseburger</div>
+          <div class="rec-text">House-ground chuck, house-made bun, Thousand Island — butcher shop quality you can't get elsewhere. This is why you came. Split one, it's substantial.</div>
+        </div>
+
+        <a class="nav-btn" href="https://maps.google.com/?daddr=2855+El+Cajon+Blvd,+San+Diego,+CA+92104" target="_blank" rel="noopener">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11L11 3M11 3H5M11 3v6"/></svg>
+          Navigate
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- WALK 2→3 -->
+  <div class="walk-connector">
+    <div class="line"></div>
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M10 22V14L8 11l2-3h4l2 3-2 3v8"/></svg>
+    10 min walk north via 30th St → Adams Ave
+  </div>
+
+  <!-- STOP 3 -->
+  <div class="stop-card" data-stop="3" onclick="toggleCard(this)">
+    <div class="stop-header">
+      <div class="stop-number">3</div>
+      <div class="stop-info">
+        <div class="category">Best Dessert</div>
+        <h2>An's Dry Cleaning</h2>
+        <div class="address">3017 Adams Ave, North Park</div>
+        <div class="hours">Open today 11am – 11pm &bull; <a href="tel:6194506166" class="phone-link">(619) 450-6166</a></div>
+      </div>
+      <svg class="expand-icon" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 8 10 12 14 8"/></svg>
+    </div>
+    <div class="stop-details">
+      <div class="stop-details-inner">
+        <div class="divider"></div>
+
+        <div class="menu-section">
+          <h3>Current Rotating Gelato & Sorbet</h3>
+          <div class="flavor-grid">
+            <div class="flavor-card pick">
+              <div class="flavor-name">Canvas <span class="pick-badge">pick</span></div>
+              <div class="flavor-desc">Olive oil & rosemary — their most requested, silky & savory-sweet</div>
+            </div>
+            <div class="flavor-card pick">
+              <div class="flavor-name">No Signal <span class="pick-badge">pick</span></div>
+              <div class="flavor-desc">Butterscotch, date sponge cake, pecan — sticky toffee pudding vibes</div>
+            </div>
+            <div class="flavor-card">
+              <div class="flavor-name">CA Snapback</div>
+              <div class="flavor-desc">Chocolate, olive oil, pistachio — Dubai chocolate vibes</div>
+            </div>
+            <div class="flavor-card">
+              <div class="flavor-name">Tubaw</div>
+              <div class="flavor-desc">Ube with Saigon coffee whipped cream</div>
+            </div>
+            <div class="flavor-card">
+              <div class="flavor-name">Docker Cap</div>
+              <div class="flavor-desc">Cardamom, white chocolate, chocolate coffee cookies</div>
+            </div>
+            <div class="flavor-card">
+              <div class="flavor-name">Foulard</div>
+              <div class="flavor-desc">Coconut cream cheese, passionfruit, pineapple, graham crackers</div>
+            </div>
+            <div class="flavor-card">
+              <div class="flavor-name">Linen <span style="font-size:0.6rem;color:var(--text-muted)">(vegan)</span></div>
+              <div class="flavor-desc">Pineapple basil sorbet</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rec-box">
+          <div class="rec-title">Claude's Pick: Canvas + No Signal</div>
+          <div class="rec-text"><strong>Canvas</strong> — olive oil rosemary gelato, unlike anything you've had. <strong>No Signal</strong> — sticky toffee pudding in frozen form. They'll let you taste every flavor before choosing. #1 ice cream shop in America (USA Today, twice).</div>
+        </div>
+
+        <a class="nav-btn" href="https://maps.google.com/?daddr=3017+Adams+Ave,+San+Diego,+CA+92116" target="_blank" rel="noopener">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11L11 3M11 3H5M11 3v6"/></svg>
+          Navigate
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Toggle cards
+  function toggleCard(el) {
+    const wasActive = el.classList.contains('active');
+    document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('active'));
+    if (!wasActive) {
+      el.classList.add('active');
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+    }
+  }
+
+  // Map
+  const stops = [
+    { name: 'The Taco Stand', cat: 'Best Taco', lat: 32.7487, lng: -117.1289, color: '#f97316' },
+    { name: 'The Wise Ox', cat: 'Best Burger', lat: 32.7472, lng: -117.1233, color: '#ef4444' },
+    { name: "An's Dry Cleaning", cat: 'Best Dessert', lat: 32.7627, lng: -117.1298, color: '#8b5cf6' }
+  ];
+
+  const map = L.map('map', {
+    center: [32.7535, -117.1270],
+    zoom: 15,
+    zoomControl: false
+  });
+
+  L.control.zoom({ position: 'topright' }).addTo(map);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  stops.forEach((stop, i) => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:32px;height:32px;border-radius:10px;
+        background:${stop.color};color:#fff;
+        display:flex;align-items:center;justify-content:center;
+        font-family:'Playfair Display',serif;font-weight:700;font-size:16px;
+        box-shadow:0 4px 12px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.2);
+      ">${i + 1}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    L.marker([stop.lat, stop.lng], { icon })
+      .addTo(map)
+      .bindPopup(`<div class="popup-cat" style="color:${stop.color}">${stop.cat}</div><div class="popup-name">${stop.name}</div>`)
+      .on('click', () => {
+        const card = document.querySelector(`.stop-card[data-stop="${i + 1}"]`);
+        if (card) { toggleCard(card); }
+      });
+  });
+
+  // Walking route lines
+  const walkPath1 = [
+    [32.7487, -117.1289],
+    [32.7487, -117.1272],
+    [32.7472, -117.1272],
+    [32.7472, -117.1233]
+  ];
+
+  const walkPath2 = [
+    [32.7472, -117.1233],
+    [32.7472, -117.1272],
+    [32.7530, -117.1272],
+    [32.7627, -117.1272],
+    [32.7627, -117.1298]
+  ];
+
+  L.polyline(walkPath1, {
+    color: '#f97316',
+    weight: 3,
+    opacity: 0.6,
+    dashArray: '8, 8'
+  }).addTo(map);
+
+  L.polyline(walkPath2, {
+    color: '#8b5cf6',
+    weight: 3,
+    opacity: 0.6,
+    dashArray: '8, 8'
+  }).addTo(map);
+
+  // Fit bounds
+  const group = L.featureGroup(stops.map(s => L.marker([s.lat, s.lng])));
+  map.fitBounds(group.getBounds().pad(0.15));
+</script>
+
+</body>
+</html>
