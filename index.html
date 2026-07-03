@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>North Park Food Tour</title>
+  <title>29 Years — Raoul & Star</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0f0f0f;
@@ -33,6 +33,16 @@
       padding: 2.5rem 1rem 1.5rem;
       background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
       border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(212, 175, 55, 0.08) 0%, transparent 70%);
+      pointer-events: none;
     }
 
     header h1 {
@@ -377,10 +387,12 @@
 <body>
 
 <header>
-  <h1>North Park Food Tour</h1>
-  <p class="subtitle">Best Taco &bull; Best Burger &bull; Best Dessert</p>
-  <div class="date">Friday, July 3, 2026</div>
-  <div class="stats">
+  <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:3px;color:#d4af37;margin-bottom:0.5rem;font-family:'Inter',sans-serif;font-weight:600;">July 3, 1997 — July 3, 2026</div>
+  <h1 style="font-size:2.6rem;margin-bottom:0.1rem;">Raoul & Star</h1>
+  <p class="subtitle" style="font-family:'Playfair Display',serif;font-style:italic;font-size:1.1rem;color:#d4af37;">Twenty-Nine Years</p>
+  <p class="subtitle" style="margin-top:0.4rem;font-size:0.85rem;">5 kids. 2 grandkids. 1 love.</p>
+  <div class="date" style="border-color:#d4af37;color:#d4af37;margin-top:1rem;">Anniversary Food Tour — North Park</div>
+  <div class="stats" style="margin-top:1rem;">
     <span>
       <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7" cy="7" r="5"/><path d="M7 4v3l2 1"/></svg>
       ~2.5 hours
